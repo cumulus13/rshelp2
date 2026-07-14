@@ -1,6 +1,13 @@
+//! File: src\main.rs
+//! Author: Hadi Cahyadi <cumulus13@gmail.com>
+//! Date: 2026-07-14
+//! Description: 
+//! License: MIT
+
 use anyhow::{Context, Result};
-use clap::{Parser, AppSettings};
+use clap::Parser;
 use clap_version_flag::*;
+use clap_color_help::default_styles;
 use colored::*;
 use make_colors::make_colors;
 use rustyline::{DefaultEditor, error::ReadlineError};
@@ -11,7 +18,7 @@ use std::process::Command;
 #[command(author = "Hadi Cahyadi <cumulus13@gmail.com>")]
 #[command(version)]
 #[command(about = "Rust enhanced help tool with beautiful terminal output")]
-#[command(settings(AppSettings::ColoredHelp))]
+#[command(styles=default_styles()]
 #[command(
     version = colorful_version!(), 
     after_help = "Examples:\n  rshelp std::fs::File\n  rshelp --source regex::Regex\n  rshelp --interactive"
