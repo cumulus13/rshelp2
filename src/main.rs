@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use clap::{Parser, AppSettings};
+use clap_version_flag::*;
 use colored::*;
 use make_colors::make_colors;
 use rustyline::{DefaultEditor, error::ReadlineError};
@@ -11,6 +12,10 @@ use std::process::Command;
 #[command(version)]
 #[command(about = "Rust enhanced help tool with beautiful terminal output")]
 #[command(settings(AppSettings::ColoredHelp))]
+#[command(
+    version = colorful_version!(), 
+    after_help = "Examples:\n  rshelp std::fs::File\n  rshelp --source regex::Regex\n  rshelp --interactive"
+)]
 pub struct Cli {
     /// Module, function, struct, or trait to get help for
     pub query: Option<String>,
@@ -38,20 +43,11 @@ pub struct Cli {
     /// Clear screen before showing results
     #[arg(short = 'c', long = "clear")]
     pub clear_screen: bool,
-
-    /// Show version information
-    #[arg(short = 'V', long = "version")]
-    pub version_flag: bool,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
     
-    if cli.version_flag {
-        println!("rshelp {}", env!("CARGO_PKG_VERSION"));
-        return Ok(());
-    }
-
     if cli.clear_screen {
         clear_screen()?;
     }
@@ -221,6 +217,7 @@ fn handle_interactive_command(query: &str) -> Result<()> {
 }
 
 fn show_help(query: &str, detailed: bool) -> Result<()> {
+    // make_colors takes 3 arguments: text, foreground color, background color (Option)
     let colored_query = make_colors(query, "#00FFFF", None);
     
     println!("\n{} {} {}", "📘".bright_blue(), "Help for".bright_white(), colored_query.bold());
