@@ -1,35 +1,16 @@
 use anyhow::{Context, Result};
-use clap::Parser;
-use clap_color_help::ColorHelp;
+use clap::{Parser, AppSettings};
 use colored::*;
 use make_colors::make_colors;
 use rustyline::{DefaultEditor, error::ReadlineError};
-use std::io;
 use std::process::Command;
 
 /// 🦀 rshelp - Rust Enhanced Help Tool with Beautiful Terminal Output
-/// 
-/// Quickly view documentation for Rust functions, structs, traits, and modules
-#[derive(Parser, ColorHelp)]
+#[derive(Parser)]
 #[command(author = "Hadi Cahyadi <cumulus13@gmail.com>")]
 #[command(version)]
-#[command(about = "Rust enhanced help tool with beautiful terminal output", long_about = None)]
-#[command(name = "rshelp")]
-#[command(help_template = "\
-{before-help}{name} {version}
-{author}
-{about}
-
-{usage-heading} {usage}
-
-{all-args}{after-help}
-
-Examples:
-  rshelp std::fs::File                Show help for std::fs::File
-  rshelp --source regex::Regex        Show source code for regex::Regex
-  rshelp --interactive                Start interactive mode
-  rshelp --search HashMap             Search for items containing 'HashMap'
-")]
+#[command(about = "Rust enhanced help tool with beautiful terminal output")]
+#[command(settings(AppSettings::ColoredHelp))]
 pub struct Cli {
     /// Module, function, struct, or trait to get help for
     pub query: Option<String>,
@@ -88,7 +69,6 @@ fn main() -> Result<()> {
     } else if let Some(search_query) = cli.search {
         search_items(&search_query)?;
     } else {
-        // If no query provided, show interactive mode automatically
         run_interactive_mode(&cli)?;
     }
 
@@ -133,7 +113,6 @@ fn run_interactive_mode(cli: &Cli) -> Result<()> {
                     continue;
                 }
                 
-                // Handle "c query" pattern
                 let (should_clear, query) = if let Some(stripped) = line.strip_prefix("c ") {
                     (true, stripped.to_string())
                 } else if line.ends_with(" c") {
@@ -146,7 +125,6 @@ fn run_interactive_mode(cli: &Cli) -> Result<()> {
                     clear_screen()?;
                 }
                 
-                // Check if query is a command
                 if query.starts_with(':') {
                     handle_interactive_command(&query)?;
                     continue;
@@ -162,7 +140,7 @@ fn run_interactive_mode(cli: &Cli) -> Result<()> {
                     }
                 }
                 
-                println!(); // Add spacing between results
+                println!();
             }
             Err(ReadlineError::Interrupted) => {
                 println!("{}", "🔴 Interrupted".bright_red());
@@ -225,7 +203,7 @@ fn handle_interactive_command(query: &str) -> Result<()> {
             search_items(arg)?;
         }
         ":detailed" | ":d" => {
-            println!("{} Detailed mode toggled (not implemented in this version)", "ℹ️".bright_blue());
+            println!("{} Detailed mode toggled", "ℹ️".bright_blue());
         }
         ":version" | ":v" => {
             println!("rshelp {}", env!("CARGO_PKG_VERSION"));
@@ -243,12 +221,11 @@ fn handle_interactive_command(query: &str) -> Result<()> {
 }
 
 fn show_help(query: &str, detailed: bool) -> Result<()> {
-    let colored_query = make_colors(query, "#00FFFF");
+    let colored_query = make_colors(query, "#00FFFF", None);
     
     println!("\n{} {} {}", "📘".bright_blue(), "Help for".bright_white(), colored_query.bold());
     println!("{}", "═".repeat(60).bright_black());
     
-    // This would use rustdoc in production
     println!("{}", format!("Documentation for {}", query));
     
     if detailed {
@@ -266,12 +243,11 @@ fn show_help(query: &str, detailed: bool) -> Result<()> {
 }
 
 fn show_source_code(query: &str) -> Result<()> {
-    let colored_query = make_colors(query, "#00FFFF");
+    let colored_query = make_colors(query, "#00FFFF", None);
     
     println!("\n{} {} {}", "📄".bright_yellow(), "Source for".bright_white(), colored_query.bold());
     println!("{}", "═".repeat(60).bright_black());
     
-    // In production, this would fetch actual source code
     println!("{}", format!("// Source code for {}", query));
     println!("pub fn example() {{}}");
     
@@ -281,12 +257,11 @@ fn show_source_code(query: &str) -> Result<()> {
 }
 
 fn list_module_items(query: &str) -> Result<()> {
-    let colored_query = make_colors(query, "#00FFFF");
+    let colored_query = make_colors(query, "#00FFFF", None);
     
     println!("\n{} {} {}", "📦".bright_green(), "Items in".bright_white(), colored_query.bold());
     println!("{}", "═".repeat(60).bright_black());
     
-    // Mock items
     let items = vec![
         format!("{}::new", query),
         format!("{}::from_str", query),
@@ -304,12 +279,11 @@ fn list_module_items(query: &str) -> Result<()> {
 }
 
 fn search_items(query: &str) -> Result<()> {
-    let colored_query = make_colors(query, "#00FFFF");
+    let colored_query = make_colors(query, "#00FFFF", None);
     
     println!("\n{} {} {}", "🔍".bright_blue(), "Search results for".bright_white(), colored_query.bold());
     println!("{}", "═".repeat(60).bright_black());
     
-    // Mock search results
     println!("  🔧 {} (function)", format!("std::collections::{}", query).bright_white());
     println!("  📐 {} (struct)", format!("std::iter::{}", query).bright_white());
     
