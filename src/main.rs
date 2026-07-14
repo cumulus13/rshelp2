@@ -1,19 +1,15 @@
-use anyhow::{Context, Result, anyhow};
-use clap::{Parser, Subcommand, ValueEnum};
+use anyhow::{Context, Result};
+use clap::Parser;
 use clap_color_help::ColorHelp;
 use colored::*;
-use make_colors::make_color;
+use make_colors::make_colors;
 use rustyline::{DefaultEditor, error::ReadlineError};
-use std::collections::HashMap;
-use std::fs;
-use std::io::{self, Write};
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::io;
+use std::process::Command;
 
 /// 🦀 rshelp - Rust Enhanced Help Tool with Beautiful Terminal Output
 /// 
-/// Quickly view documentation (docstrings) for Rust functions, 
-/// structs, traits, and modules directly from your terminal.
+/// Quickly view documentation for Rust functions, structs, traits, and modules
 #[derive(Parser, ColorHelp)]
 #[command(author = "Hadi Cahyadi <cumulus13@gmail.com>")]
 #[command(version)]
@@ -30,13 +26,12 @@ use std::process::{Command, Stdio};
 
 Examples:
   rshelp std::fs::File                Show help for std::fs::File
-  rshelp serde_json::from_str        Show help for serde_json::from_str
-  rshelp -s regex::Regex             Show source code for regex::Regex
-  rshelp --interactive               Start interactive mode
-  rshelp --search HashMap            Search for items containing 'HashMap'
+  rshelp --source regex::Regex        Show source code for regex::Regex
+  rshelp --interactive                Start interactive mode
+  rshelp --search HashMap             Search for items containing 'HashMap'
 ")]
 pub struct Cli {
-    /// Module, function, struct, or trait to get help for (e.g., std::fs::File, serde_json::from_str)
+    /// Module, function, struct, or trait to get help for
     pub query: Option<String>,
 
     /// Show source code instead of help documentation
@@ -71,7 +66,6 @@ pub struct Cli {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     
-    // Handle version flag separately due to clap-version-flag integration
     if cli.version_flag {
         println!("rshelp {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
@@ -126,7 +120,7 @@ fn run_interactive_mode(cli: &Cli) -> Result<()> {
                     continue;
                 }
                 
-                let _ = rl.add_history_entry(line.as_ref());
+                let _ = rl.add_history_entry(line.to_string());
                 
                 if line == "exit" || line == "quit" {
                     println!("{}", "👋 Goodbye!".bright_yellow());
@@ -231,7 +225,6 @@ fn handle_interactive_command(query: &str) -> Result<()> {
             search_items(arg)?;
         }
         ":detailed" | ":d" => {
-            // Toggle detailed mode - this would need to modify global state
             println!("{} Detailed mode toggled (not implemented in this version)", "ℹ️".bright_blue());
         }
         ":version" | ":v" => {
@@ -250,15 +243,21 @@ fn handle_interactive_command(query: &str) -> Result<()> {
 }
 
 fn show_help(query: &str, detailed: bool) -> Result<()> {
-    let colored_query = query.truecolor(0, 255, 255); // #00FFFF
+    let colored_query = make_colors(query, "#00FFFF");
     
     println!("\n{} {} {}", "📘".bright_blue(), "Help for".bright_white(), colored_query.bold());
     println!("{}", "═".repeat(60).bright_black());
     
-    // Simulate rustdoc lookup - in production, would use actual rustdoc
-    let item = lookup_item(query)?;
+    // This would use rustdoc in production
+    println!("{}", format!("Documentation for {}", query));
     
-    print_item_help(&item, detailed)?;
+    if detailed {
+        println!("\n{}", "Detailed Information:".bright_yellow());
+        println!("  Type: Function/Struct/Trait");
+        println!("  Module: std::example");
+        println!("  Source: src/lib.rs");
+        println!("  Visibility: pub");
+    }
     
     println!("{}", "═".repeat(60).bright_black());
     println!("{} {}", "ℹ️".bright_blue(), "Tip: Use -s flag to see source code".bright_black());
@@ -267,30 +266,14 @@ fn show_help(query: &str, detailed: bool) -> Result<()> {
 }
 
 fn show_source_code(query: &str) -> Result<()> {
-    let colored_query = query.truecolor(0, 255, 255); // #00FFFF
+    let colored_query = make_colors(query, "#00FFFF");
     
     println!("\n{} {} {}", "📄".bright_yellow(), "Source for".bright_white(), colored_query.bold());
     println!("{}", "═".repeat(60).bright_black());
     
     // In production, this would fetch actual source code
-    let source = fetch_source(query)?;
-    
-    // Syntax highlighting simulation
-    for line in source.lines() {
-        if line.starts_with("fn") || line.starts_with("pub fn") {
-            println!("{}", line.bright_yellow());
-        } else if line.starts_with("struct") || line.starts_with("pub struct") {
-            println!("{}", line.bright_magenta());
-        } else if line.starts_with("impl") {
-            println!("{}", line.bright_cyan());
-        } else if line.trim().starts_with("//") {
-            println!("{}", line.bright_black());
-        } else if line.trim().is_empty() {
-            println!();
-        } else {
-            println!("{}", line);
-        }
-    }
+    println!("{}", format!("// Source code for {}", query));
+    println!("pub fn example() {{}}");
     
     println!("{}", "═".repeat(60).bright_black());
     
@@ -298,64 +281,21 @@ fn show_source_code(query: &str) -> Result<()> {
 }
 
 fn list_module_items(query: &str) -> Result<()> {
-    let colored_query = query.truecolor(0, 255, 255); // #00FFFF
+    let colored_query = make_colors(query, "#00FFFF");
     
     println!("\n{} {} {}", "📦".bright_green(), "Items in".bright_white(), colored_query.bold());
     println!("{}", "═".repeat(60).bright_black());
     
-    let items = get_module_items(query)?;
+    // Mock items
+    let items = vec![
+        format!("{}::new", query),
+        format!("{}::from_str", query),
+        format!("{}::to_string", query),
+    ];
     
-    // Group items by type
-    let mut functions = Vec::new();
-    let mut structs = Vec::new();
-    let mut enums = Vec::new();
-    let mut traits = Vec::new();
-    let mut other = Vec::new();
-    
+    println!("{}", "🔧 Functions:".bright_green());
     for item in items {
-        let item_type = guess_item_type(&item);
-        match item_type {
-            "function" => functions.push(item),
-            "struct" => structs.push(item),
-            "enum" => enums.push(item),
-            "trait" => traits.push(item),
-            _ => other.push(item),
-        }
-    }
-    
-    if !functions.is_empty() {
-        println!("{}", "🔧 Functions:".bright_green());
-        for f in functions {
-            println!("  {}", f.bright_white());
-        }
-    }
-    
-    if !structs.is_empty() {
-        println!("{}", "📐 Structs:".bright_magenta());
-        for s in structs {
-            println!("  {}", s.bright_white());
-        }
-    }
-    
-    if !enums.is_empty() {
-        println!("{}", "🎨 Enums:".bright_cyan());
-        for e in enums {
-            println!("  {}", e.bright_white());
-        }
-    }
-    
-    if !traits.is_empty() {
-        println!("{}", "🧬 Traits:".bright_yellow());
-        for t in traits {
-            println!("  {}", t.bright_white());
-        }
-    }
-    
-    if !other.is_empty() {
-        println!("{}", "📌 Other:".bright_black());
-        for o in other {
-            println!("  {}", o.bright_white());
-        }
+        println!("  {}", item.bright_white());
     }
     
     println!("{}", "═".repeat(60).bright_black());
@@ -364,96 +304,16 @@ fn list_module_items(query: &str) -> Result<()> {
 }
 
 fn search_items(query: &str) -> Result<()> {
-    let colored_query = query.truecolor(0, 255, 255); // #00FFFF
+    let colored_query = make_colors(query, "#00FFFF");
     
     println!("\n{} {} {}", "🔍".bright_blue(), "Search results for".bright_white(), colored_query.bold());
     println!("{}", "═".repeat(60).bright_black());
     
-    let results = perform_search(query)?;
-    
-    if results.is_empty() {
-        println!("{} {}", "ℹ️".bright_blue(), "No results found".bright_black());
-    } else {
-        for (path, item_type) in results {
-            let icon = match item_type.as_str() {
-                "function" => "🔧",
-                "struct" => "📐",
-                "enum" => "🎨",
-                "trait" => "🧬",
-                "module" => "📦",
-                _ => "📄",
-            };
-            println!("  {} {} ({})", icon, path.bright_white(), item_type.bright_black());
-        }
-    }
+    // Mock search results
+    println!("  🔧 {} (function)", format!("std::collections::{}", query).bright_white());
+    println!("  📐 {} (struct)", format!("std::iter::{}", query).bright_white());
     
     println!("{}", "═".repeat(60).bright_black());
     
     Ok(())
-}
-
-// Mock functions that would be replaced with actual Rust doc implementations
-
-fn lookup_item(query: &str) -> Result<String> {
-    // This would use rustdoc, rustc, or cargo doc to fetch actual documentation
-    // For demo purposes, return mock data
-    Ok(format!("Documentation for {}", query))
-}
-
-fn fetch_source(query: &str) -> Result<String> {
-    // Would use rustc source code fetching
-    Ok(format!("// Source code for {}\npub fn example() {{}}\nimpl std::fmt::Display for Example {{}}", query))
-}
-
-fn get_module_items(query: &str) -> Result<Vec<String>> {
-    // Would inspect module items using rustdoc JSON
-    Ok(vec![
-        format!("{}{}", query, "::new"),
-        format!("{}{}", query, "::from_str"),
-        format!("{}{}", query, "::to_string"),
-        format!("{}{}", query, "::clone"),
-    ])
-}
-
-fn perform_search(query: &str) -> Result<Vec<(String, String)>> {
-    // Would search through installed crates and std
-    Ok(vec![
-        (format!("std::collections::{}", query), "struct".to_string()),
-        (format!("std::iter::{}", query), "function".to_string()),
-        (format!("std::string::{}", query), "function".to_string()),
-    ])
-}
-
-fn print_item_help(item: &str, detailed: bool) -> Result<()> {
-    // Mock print function - in production would use proper formatting
-    println!("{}", item);
-    
-    if detailed {
-        println!("\n{}", "Detailed Information:".bright_yellow());
-        println!("  Type: Function/Struct/Trait");
-        println!("  Module: std::example");
-        println!("  Source: src/lib.rs");
-        println!("  Visibility: pub");
-        println!("  Attributes: #[derive(Debug)]");
-    }
-    
-    Ok(())
-}
-
-fn guess_item_type(item: &str) -> String {
-    if item.contains("::new") || item.contains("::from") {
-        "function".to_string()
-    } else if item.contains("::to_") || item.contains("::as_") {
-        "function".to_string()
-    } else if item.contains("Struct") || item.contains("struct") {
-        "struct".to_string()
-    } else if item.contains("Enum") || item.contains("enum") {
-        "enum".to_string()
-    } else if item.contains("Trait") || item.contains("trait") {
-        "trait".to_string()
-    } else if item.contains("std::") || item.contains("core::") {
-        "module".to_string()
-    } else {
-        "other".to_string()
-    }
 }
