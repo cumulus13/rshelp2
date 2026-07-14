@@ -18,7 +18,7 @@ use std::process::Command;
 #[command(author = "Hadi Cahyadi <cumulus13@gmail.com>")]
 #[command(version)]
 #[command(about = "Rust enhanced help tool with beautiful terminal output")]
-#[command(styles=default_styles()]
+#[command(styles=default_styles())]
 #[command(
     version = colorful_version!(), 
     after_help = "Examples:\n  rshelp std::fs::File\n  rshelp --source regex::Regex\n  rshelp --interactive"
