@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use clap_version_flag::*;
 use clap_color_help::default_styles;
-use colored::*;
+use colored::colorful_version;
 use make_colors::make_colors;
 use rustyline::{DefaultEditor, error::ReadlineError};
 use std::process::Command;
@@ -19,10 +19,7 @@ use std::process::Command;
 #[command(version)]
 #[command(about = "Rust enhanced help tool with beautiful terminal output")]
 #[command(styles=default_styles())]
-#[command(
-    version = colorful_version!(), 
-    after_help = "Examples:\n  rshelp std::fs::File\n  rshelp --source regex::Regex\n  rshelp --interactive"
-)]
+#[command(after_help = "Examples:\n  rshelp std::fs::File\n  rshelp --source regex::Regex\n  rshelp --interactive")]
 pub struct Cli {
     /// Module, function, struct, or trait to get help for
     pub query: Option<String>,
@@ -53,6 +50,12 @@ pub struct Cli {
 }
 
 fn main() -> Result<()> {
+    let os_args Vec<String> = std::env::args().collect();
+    if os_args.len() > 2 && (os_args[1] == "-V" || os_args[1] == "--version") {
+        let version = colorful_version!();
+        version.print_and_exit();
+    }
+    
     let cli = Cli::parse();
     
     if cli.clear_screen {
