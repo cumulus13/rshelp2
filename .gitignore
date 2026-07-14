@@ -1,0 +1,19 @@
+
+# Ignore Sublime Text project files
+*.sublime-*
+/target/
+**/*.rs.bk
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.iml
+*.exe
+PLAN.md
+ANSWER*.md
+tmp*
+src/tmp*
+downloads/
+download/
+gitignore_backup/
